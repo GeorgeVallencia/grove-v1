@@ -1,86 +1,91 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function Integrations({ 
-  userId,
-  hasGmail 
+  userId, 
+  hasGmail,
+  hasGoogleFit,
+  hasGitHub
 }: { 
   userId: string
   hasGmail: boolean
+  hasGoogleFit: boolean
+  hasGitHub: boolean
 }) {
-  const [syncing, setSyncing] = useState(false)
-  const router = useRouter()
+  const [syncing, setSyncing] = useState<string | null>(null)
 
-  const handleSync = async () => {
-    setSyncing(true)
+  const handleSync = async (providerId: string) => {
+    setSyncing(providerId)
     try {
-      const response = await fetch('/api/integrations/sync', {
+      await fetch('/api/integrations/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, providerId: 'gmail' })
+        body: JSON.stringify({ userId, providerId })
       })
-
-      const result = await response.json()
-      
-      if (result.success) {
-        router.refresh()
-      } else {
-        alert('Sync failed. Try again.')
-      }
+      alert(`${providerId} synced!`)
+      window.location.reload()
     } catch (error) {
-      console.error('Sync error:', error)
-      alert('Sync failed. Try again.')
+      alert('Sync failed')
+    } finally {
+      setSyncing(null)
     }
-    setSyncing(false)
   }
 
   return (
-    <div className="mb-6">
-      <h2 className="text-white text-lg font-semibold mb-3">Integrations</h2>
-      <div className="flex gap-3">
-        {hasGmail ? (
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="bg-green-900/30 border border-green-500/50 text-green-400 font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-2 hover:bg-green-900/50 disabled:opacity-50"
+    <div className="mb-6 bg-[#1a2e1a] border border-green-900/40 rounded-2xl p-6">
+      <h2 className="text-white text-lg font-semibold mb-4">Integrations</h2>
+      
+      <div className="space-y-3">
+        {/* Gmail */}
+        {!hasGmail ? (<a href={`/api/auth/google?userId=${userId}`}
+            className="cursor-pointer block bg-green-900/30 hover:bg-green-900/50 border border-green-500/30 text-green-400 px-4 py-3 rounded-xl text-center"
           >
-            <span>📧</span>
-            {syncing ? 'Syncing...' : 'Sync Gmail Now'}
-          </button>
+            📧 Connect Gmail
+          </a>
         ) : (
           <button
-            onClick={() => window.location.href = `/api/auth/google?userId=${userId}`}
-            className="bg-white hover:bg-gray-100 text-gray-900 font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
+            onClick={() => handleSync('gmail')}
+            disabled={syncing === 'gmail'}
+            className="cursor-pointer w-full bg-green-900/30 hover:bg-green-900/50 border border-green-500/30 text-green-400 px-4 py-3 rounded-xl"
           >
-            <span>📧</span>
-            Connect Gmail
+            {syncing === 'gmail' ? 'Syncing...' : '📧 Sync Gmail Now'}
+          </button>
+        )}
+
+        {/* Google Fit */}
+        {!hasGoogleFit ? (<a href={`/api/auth/google-fit?userId=${userId}`}
+            className="cursor-pointer block bg-green-900/30 hover:bg-green-900/50 border border-green-500/30 text-green-400 px-4 py-3 rounded-xl text-center"
+          >
+            🏃 Connect Google Fit
+          </a>
+        ) : (
+          <button
+            onClick={() => handleSync('google_fit')}
+            disabled={syncing === 'google_fit'}
+            className="cursor-pointer w-full bg-green-900/30 hover:bg-green-900/50 border border-green-500/30 text-green-400 px-4 py-3 rounded-xl"
+          >
+            {syncing === 'google_fit' ? 'Syncing...' : '🏃 Sync Google Fit Now'}
+          </button>
+        )}
+
+        {/* GitHub */}
+        {!hasGitHub ? (<a href={`/api/auth/github?userId=${userId}`}
+            className="cursor-pointer block bg-green-900/30 hover:bg-green-900/50 border border-green-500/30 text-green-400 px-4 py-3 rounded-xl text-center"
+          >
+            💻 Connect GitHub
+          </a>
+        ) : (
+          <button
+            onClick={() => handleSync('github')}
+            disabled={syncing === 'github'}
+            className="cursor-pointer w-full bg-green-900/30 hover:bg-green-900/50 border border-green-500/30 text-green-400 px-4 py-3 rounded-xl"
+          >
+            {syncing === 'github' ? 'Syncing...' : '💻 Sync GitHub Now'}
           </button>
         )}
       </div>
     </div>
   )
 }
-
-
-
-// 'use client'
-
-// export default function Integrations({ userId }: { userId: string }) {
-//   return (
-//     <div className="mb-6">
-//       <h2 className="text-white text-lg font-semibold mb-3">Integrations</h2>
-//       <div className="flex gap-3">
-//         <button
-//           onClick={() => window.location.href = `/api/auth/google?userId=${userId}`}
-//           className="bg-white cursor-pointer hover:bg-gray-100 text-gray-900 font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
-//         >
-//           <span>📧</span>
-//           Connect Gmail
-//         </button>
-//       </div>
-//     </div>
-//   )
-// }
 

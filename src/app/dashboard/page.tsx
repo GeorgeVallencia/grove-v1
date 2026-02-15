@@ -34,11 +34,29 @@ export default async function DashboardPage() {
     .select('*')
     .eq('user_id', user.id)
 
+  // Check for Gmail integration
   const { data: gmailIntegration } = await supabase
     .from('user_integrations')
     .select('id')
     .eq('user_id', user.id)
     .eq('provider_id', 'gmail')
+    .eq('status', 'active')
+    .single()
+
+  // Check for Google Fit integration
+  const { data: googleFitIntegration } = await supabase
+    .from('user_integrations')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('provider_id', 'google_fit')
+    .eq('status', 'active')
+    .single()
+
+  const { data: githubIntegration } = await supabase
+    .from('user_integrations')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('provider_id', 'github')
     .eq('status', 'active')
     .single()
 
@@ -52,7 +70,12 @@ export default async function DashboardPage() {
         </header>
 
         {/* Integrations */}
-        <Integrations userId={user.id} hasGmail={!!gmailIntegration} />
+        <Integrations 
+          userId={user.id} 
+          hasGmail={!!gmailIntegration}
+          hasGoogleFit={!!googleFitIntegration}
+          hasGitHub={!!githubIntegration}
+        />
 
         {/* Webhook Token */}
         <WebhookToken token={profile?.webhook_token || ''} />

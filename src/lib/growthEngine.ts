@@ -46,9 +46,11 @@ export async function evaluateGardenGrowth(userId: string) {
       )
 
       if (conditionMet) {
-        levelDelta += rule.growth_amount
+        levelDelta += rule.growth_amount // Full growth (10 points)
+      }else if(metricValue > 0){
+        levelDelta += 2 // Effort for (2 points for typing)
       } else {
-        levelDelta -= rule.decay_per_day
+        levelDelta -= rule.decay_per_day // Decay only if no activity at all
       }
     }
 

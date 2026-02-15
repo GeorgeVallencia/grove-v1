@@ -42,7 +42,12 @@ export default function LogEntry({
           metric_id: metricId,
           date: today,
           value: parseFloat(value),
-          source: 'manual'
+          source: 'manual',
+          raw_data: {
+            logged_at: new Date().toISOString(),
+            input_value: value,
+            via: 'manual_form'
+          }
         }))
 
       if (entries.length === 0) {
@@ -121,7 +126,7 @@ export default function LogEntry({
         <button
           type="submit"
           disabled={loading}
-          className="w-ful cursor-pointer bg-green-600 hover:bg-green-500 disabled:bg-green-900 text-white font-medium py-3 rounded-xl transition-colors"
+          className="w-ful px-4 cursor-pointer bg-green-600 hover:bg-green-500 disabled:bg-green-900 text-white font-medium py-3 rounded-xl transition-colors"
         >
           {loading ? 'Saving...' : 'Log progress'}
         </button>

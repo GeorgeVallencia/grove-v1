@@ -61,6 +61,12 @@ export async function POST(request: Request) {
           date: today,
           value: activity.value,
           source: 'nlp',
+          raw_data: {
+            original_message: message,
+            parsed_activity: activity,
+            confidence: activity.confidence,
+            logged_at: new Date().toISOString()
+          }
         }, {
           onConflict: 'user_id, metric_id, date'
         })

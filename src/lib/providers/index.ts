@@ -1,4 +1,7 @@
-// This is the interface every provider must implement
+import { syncGmail } from './gmail'
+import { syncGoogleFit } from './googleFit'
+import { syncGitHub } from './github'
+
 export type ProviderSyncResult = {
   metric_id: string
   date: string
@@ -11,18 +14,19 @@ export async function syncProvider(
   userId: string,
   providerId: string,
   accessToken: string,
-  config: any
+  config?: any
 ): Promise<ProviderSyncResult[]> {
-  const providers: Record<string, () => Promise<ProviderSyncResult[]>> = {
-    gmail: () => import('./gmail').then(m => m.sync(userId, accessToken, config)),
-    google_fit: () => import('./googleFit').then(m => m.sync(userId, accessToken, config)),
-    monkeytype: () => import('./monkeytype').then(m => m.sync(userId, config)),
-    github: () => import('./github').then(m => m.sync(userId, accessToken, config)),
+  switch (providerId) {
+    case 'gmail':
+      return syncGmail(userId, accessToken, config)
+    
+    case 'google_fit':
+      return syncGoogleFit(userId, accessToken, config)
+    
+    case 'github':
+      return syncGitHub(userId, accessToken, config)
+    
+    default:
+      throw new Error(`Unknown provider: ${providerId}`)
   }
-
-  const handler = providers[providerId]
-  if (!handler) throw new Error(`Unknown provider: ${providerId}`)
-
-  return handler()
 }
-

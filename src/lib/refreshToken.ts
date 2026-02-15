@@ -1,76 +1,79 @@
 import { createClient } from '@/lib/supabase/server'
-import { encryptToken, decryptToken } from '@/lib/crypto'
+import { encrypt, decrypt } from '@/lib/crypto'
 
 export async function getValidAccessToken(userId: string, providerId: string): Promise<string> {
   const supabase = await createClient()
 
   const { data: integration } = await supabase
     .from('user_integrations')
-    .select('*')
+    .select('access_token, refresh_token, expires_at')
     .eq('user_id', userId)
     .eq('provider_id', providerId)
     .single()
 
   if (!integration) {
-    throw new Error(`${providerId} not connected`)
+    throw new Error('Integration not found')
   }
 
-  const expiresAt = new Date(integration.token_expires_at)
+  // GitHub tokens don't expire, return immediately
+  if (providerId === 'github') {
+    return decrypt(integration.access_token)
+  }
+
+  // For Google tokens, check expiry
+  const expiresAt = new Date(integration.expires_at)
   const now = new Date()
   const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000)
 
-  // Token still valid for more than 5 minutes
   if (expiresAt > fiveMinutesFromNow) {
-    return decryptToken(integration.access_token)
+    return decrypt(integration.access_token)
   }
 
   // Need to refresh
   if (!integration.refresh_token) {
+    await supabase
+      .from('user_integrations')
+      .update({ status: 'disconnected' })
+      .eq('user_id', userId)
+      .eq('provider_id', providerId)
+    
     throw new Error('No refresh token available')
   }
 
-  const refreshToken = decryptToken(integration.refresh_token)
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      refresh_token: refreshToken,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      refresh_token: decrypt(integration.refresh_token),
       grant_type: 'refresh_token'
     })
   })
 
-  if (!response.ok) {
-    // Refresh token is dead - mark as disconnected
+  const tokens = await tokenResponse.json()
+
+  if (!tokens.access_token) {
     await supabase
       .from('user_integrations')
-      .update({
-        status: 'disconnected',
-        disconnected_at: new Date().toISOString(),
-        error_message: 'Refresh token expired. Please reconnect.'
-      })
+      .update({ status: 'disconnected' })
       .eq('user_id', userId)
       .eq('provider_id', providerId)
-
-    throw new Error('Refresh token expired')
+    
+    throw new Error('Failed to refresh token')
   }
 
-  const tokens = await response.json()
-  const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000)
+  const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
-  // Save new access token
   await supabase
     .from('user_integrations')
     .update({
-      access_token: encryptToken(tokens.access_token),
-      token_expires_at: newExpiresAt.toISOString(),
-      status: 'active',
-      error_message: null
+      access_token: encrypt(tokens.access_token),
+      expires_at: newExpiresAt
     })
     .eq('user_id', userId)
     .eq('provider_id', providerId)
 
   return tokens.access_token
 }
+

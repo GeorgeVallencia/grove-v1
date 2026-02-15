@@ -1,6 +1,6 @@
 import type { ProviderSyncResult } from './index'
 
-export async function sync(
+export async function syncGmail(
   userId: string,
   accessToken: string,
   config: any
